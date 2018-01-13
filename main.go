@@ -15,7 +15,7 @@ import (
 
 type word uint32
 type LineAddress uint8
-type CRTAddress uint8
+type CRTAddress uint16
 type SSEMFunc uint8
 
 var Memory [100]word
@@ -37,86 +37,100 @@ type SSEMInst struct {
 	Func   SSEMFunc
 }
 
-func Fetch(MEMR <-chan SSEMInst, FD chan<- string) {
+func Mem(fptr string) int {
 
 	// Fetch data/inst. from file
 	// TODO read from MEMR chan.
-	file, err := os.Open("./data/gcd.raw")
+	file, err := os.Open(fptr)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
+	index := 0
+	var h0, h1, h2, h3 uint8
+	var i, i_ string
 
 	for scanner.Scan() {
-		FD <- scanner.Text()
+		str := scanner.Text()
+		fmt.Sscanf(str, "%4s%4s", &i_, &i)
+		fmt.Sscanf(i, "%1x%1x%1x%1x", &h0, &h1, &h2, &h3)
+		Memory[index] = word((h0<<8|h1)<<8 | (h2<<8 | h3))
+		index += 1
 	}
 	if err := scanner.Err(); err != nil {
 		log.Fatal(err)
 	}
 	file.Close()
+	return index
 }
 
-func Decode(FD <-chan string, DE chan<- SSEMInst) {
+func Fetch(FD chan<- word) {
 
-	var s, i string
-	var h0, h1, h2, h3 byte
-
+	index := 0
 	for {
+		FD <- Memory[index]
+		index += 1
+	}
+}
 
+func Decode(FD <-chan word, DE chan<- SSEMInst) {
+
+	var LA LineAddress
+	var CA CRTAddress
+	var Fun SSEMFunc
+	for {
 		IR := <-FD
+		LA = LineAddress(IR & 0x001f)
+		CA = CRTAddress((IR & 0x0fff) >> 4)
+		Fun = SSEMFunc(IR >> 24)
 
-		fmt.Sscanf(IR, "%4s%4s", &s, &i)
-		fmt.Sscanf(i, "%1x%1x%1x%1x", &h0, &h1, &h2, &h3)
-
-		fmt.Println(h0, h1, h2, h3)
-
-		switch SSEMFunc(h0) {
+		switch SSEMFunc(Fun) {
 		case JMP:
 			DE <- SSEMInst{
-				LineNo: 0,
-				CRTNo:  0,
+				LineNo: LA,
+				CRTNo:  CA,
 				Func:   JMP}
 		case JRP:
 			DE <- SSEMInst{
-				LineNo: 0,
-				CRTNo:  0,
+				LineNo: LA,
+				CRTNo:  CA,
 				Func:   JRP}
 		case LDN:
 			DE <- SSEMInst{
-				LineNo: 0,
-				CRTNo:  0,
+				LineNo: LA,
+				CRTNo:  CA,
 				Func:   LDN}
 		case STO:
 			DE <- SSEMInst{
-				LineNo: 0,
-				CRTNo:  0,
+				LineNo: LA,
+				CRTNo:  CA,
 				Func:   STO}
 		case SUB:
 			DE <- SSEMInst{
-				LineNo: 0,
-				CRTNo:  0,
+				LineNo: LA,
+				CRTNo:  CA,
 				Func:   SUB}
 		case SUB_alt:
 			DE <- SSEMInst{
-				LineNo: 0,
-				CRTNo:  0,
+				LineNo: LA,
+				CRTNo:  CA,
 				Func:   SUB_alt}
 		case TEST:
 			DE <- SSEMInst{
-				LineNo: 0,
-				CRTNo:  0,
+				LineNo: LA,
+				CRTNo:  CA,
 				Func:   TEST}
 		case STOP:
 			DE <- SSEMInst{
-				LineNo: 0,
-				CRTNo:  0,
+				LineNo: LA,
+				CRTNo:  CA,
 				Func:   STOP}
 		default:
 			DE <- SSEMInst{
-				LineNo: 0,
-				CRTNo:  0,
+				LineNo: LA,
+				CRTNo:  CA,
 				Func:   STOP}
 		}
 
