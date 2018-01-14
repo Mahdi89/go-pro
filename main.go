@@ -18,7 +18,12 @@ type LineAddress uint8
 type CRTAddress uint16
 type SSEMFunc uint8
 
+// Global memory and state variables
 var Memory [100]word
+var PC, PC_step LineAddress
+var ACC word
+var MDR word
+var Stopped bool
 
 const (
 	JMP SSEMFunc = iota
@@ -68,72 +73,26 @@ func Mem(fptr string) int {
 
 func Fetch(FD chan<- word) {
 
-	index := 0
 	for {
-		FD <- Memory[index]
-		index += 1
+		FD <- Memory[PC]
+		if PC < 5 {
+			PC++
+		}
 	}
 }
 
 func Decode(FD <-chan word, DE chan<- SSEMInst) {
 
-	var LA LineAddress
-	var CA CRTAddress
-	var Fun SSEMFunc
 	for {
 		IR := <-FD
-		LA = LineAddress(IR & 0x001f)
-		CA = CRTAddress((IR & 0x0fff) >> 4)
-		Fun = SSEMFunc(IR >> 24)
+		LA := LineAddress(IR & 0x001f)
+		CA := CRTAddress((IR & 0x0fff) >> 4)
+		Func := SSEMFunc(IR >> 24)
 
-		switch SSEMFunc(Fun) {
-		case JMP:
-			DE <- SSEMInst{
-				LineNo: LA,
-				CRTNo:  CA,
-				Func:   JMP}
-		case JRP:
-			DE <- SSEMInst{
-				LineNo: LA,
-				CRTNo:  CA,
-				Func:   JRP}
-		case LDN:
-			DE <- SSEMInst{
-				LineNo: LA,
-				CRTNo:  CA,
-				Func:   LDN}
-		case STO:
-			DE <- SSEMInst{
-				LineNo: LA,
-				CRTNo:  CA,
-				Func:   STO}
-		case SUB:
-			DE <- SSEMInst{
-				LineNo: LA,
-				CRTNo:  CA,
-				Func:   SUB}
-		case SUB_alt:
-			DE <- SSEMInst{
-				LineNo: LA,
-				CRTNo:  CA,
-				Func:   SUB_alt}
-		case TEST:
-			DE <- SSEMInst{
-				LineNo: LA,
-				CRTNo:  CA,
-				Func:   TEST}
-		case STOP:
-			DE <- SSEMInst{
-				LineNo: LA,
-				CRTNo:  CA,
-				Func:   STOP}
-		default:
-			DE <- SSEMInst{
-				LineNo: LA,
-				CRTNo:  CA,
-				Func:   STOP}
-		}
-
+		DE <- SSEMInst{
+			LineNo: LA,
+			CRTNo:  CA,
+			Func:   Func}
 	}
 }
 
@@ -141,9 +100,36 @@ func Execute(DE <-chan SSEMInst, EW chan<- SSEMInst) {
 
 	for {
 		IR := <-DE
+		//LA := IR.LineNo
+		//CA := IR.CRTNo
+		Func := IR.Func
+
 		// Execute the decoded instruction
-		MDR := IR
-		EW <- MDR
+
+		switch SSEMFunc(Func) {
+		case JMP:
+			// Jump - update PC
+			// JMP then MemoryRead (); ZeroPC (); AddMDRToPC ()
+		case JRP:
+			// Relative Jummp
+			// JMP then MemoryRead (); ZeroPC (); AddMDRToPC ()
+		case LDN:
+			// Load negative - read memory (MDR)
+			// LDN then ZeroACC (); SUB ()
+		case STO:
+			// Store ACC result to memory
+			// STO then MemoryWrite ()
+		case SUB, SUB_alt:
+			// MemoryRead (); ACC = (ACC - MDR as word)
+		case TEST:
+			// Test - if ACC<0 PC++
+		case STOP:
+			Stopped = true
+		default:
+			// Nothing
+		}
+
+		EW <- IR
 	}
 }
 

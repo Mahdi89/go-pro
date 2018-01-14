@@ -27,7 +27,7 @@ func TestProcessor(t *testing.T) {
 	expected := SSEMInst{
 		LineNo: 0,
 		CRTNo:  0,
-		Func:   STOP,
+		Func:   JMP,
 	}
 	if expected != ret {
 		t.Errorf("Expected price %v got %v", expected, ret)
