@@ -1,0 +1,11 @@
+processor:
+  type: uint32
+  typeWidth: 32
+  deserialize: Deserialize
+  function: Processor
+  replicate: 4
+router:
+  type: uint32
+  typeWidth: 32
+  serialize: Serialize
+  function: Router
