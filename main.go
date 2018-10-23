@@ -141,3 +141,25 @@ func WriteBack(EW <-chan SSEMInst, MEMW chan<- SSEMInst) {
 		MEMW <- MDR
 	}
 }
+
+func main(){
+
+
+	// Inter stage channels
+	FD := make(chan word, 1)
+	DE := make(chan SSEMInst, 1)
+	EW := make(chan SSEMInst, 1)
+	MEMW := make(chan SSEMInst, 1)
+
+	// Load the memory
+	go Mem("./data/gcd.raw")
+
+	// Processor stages
+	go Fetch(FD)
+	go Decode(FD, DE)
+	go Execute(DE, EW)
+	go WriteBack(EW, MEMW)
+
+	<-MEMW
+
+}
