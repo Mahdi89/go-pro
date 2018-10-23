@@ -15,3 +15,9 @@ Currently a high level model of a 4-stage in-order processor based on the Manche
 ## Network-on-Chip
 
 Use the provided generator in `generator/` to build an interconnected network of the node specified in the main directory. The Go generate tooling are used for this purpose. You could generate any network of any size by specifying the network configuration in the `yml` file. The Processor/Router spec should go into `input.go`.
+
+## Materials
+
+* GopherCon18 talk: https://www.youtube.com/watch?reload=9&v=IzyEKH8N4aE
+
+
